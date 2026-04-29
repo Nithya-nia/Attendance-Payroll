@@ -1,149 +1,132 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 function EmployeePage() {
-  const [activeTab, setActiveTab] = useState("attendance");
-  const [checkedIn, setCheckedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [checkInTime, setCheckInTime] = useState(null);
+  const [checkOutTime, setCheckOutTime] = useState(null);
+  const [hours, setHours] = useState(null);
 
-  // Dummy data (later replace with API)
-  const attendanceData = [
-    { date: "01-Apr", login: "9:00 AM", logout: "6:00 PM", hours: "9" },
-    { date: "02-Apr", login: "9:15 AM", logout: "6:00 PM", hours: "8.5" },
-  ];
+  useEffect(() => {
+    const data = localStorage.getItem("user");
+    if (data) {
+      setUser(JSON.parse(data));
+    }
+  }, []);
 
-  const salary = {
-    presentDays: 22,
-    lopDays: 3,
-    overtime: 10,
-    net: 25000,
+  if (!user) return <div className="text-center mt-5">Loading...</div>;
+
+  const handleCheckIn = async () => {
+    const res = await axios.post("http://localhost:5000/check-in", {
+      userId: user._id,
+      name: user.name
+    });
+    setCheckInTime(res.data.checkInTime);
+  };
+
+  const handleCheckOut = async () => {
+    const res = await axios.post("http://localhost:5000/check-out", {
+      userId: user._id
+    });
+    setCheckOutTime(res.data.checkOutTime);
+    setHours(res.data.totalHours);
   };
 
   return (
-    <div className="container mt-4">
+    <div className="d-flex" style={{ height: "100vh", background: "#f4f6f9" }}>
 
-      <h3 className="text-center mb-4">Employee Dashboard</h3>
+      {/* 🔵 Sidebar */}
+      <div
+        style={{
+          width: "260px",
+          background: "linear-gradient(180deg, #4e73df, #224abe)",
+          color: "white",
+          padding: "25px",
+          boxShadow: "2px 0 10px rgba(0,0,0,0.1)"
+        }}
+      >
+        <h3 className="mb-4">👤 Employee</h3>
 
-      {/* Tabs */}
-      <ul className="nav nav-tabs mb-3">
-        <li className="nav-item">
-          <button className={`nav-link ${activeTab === "attendance" && "active"}`}
-            onClick={() => setActiveTab("attendance")}>
-            Attendance
-          </button>
-        </li>
+        <div className="mb-3">
+          <small>Name</small>
+          <h6>{user.name}</h6>
+        </div>
 
-        <li className="nav-item">
-          <button className={`nav-link ${activeTab === "salary" && "active"}`}
-            onClick={() => setActiveTab("salary")}>
-            Salary
-          </button>
-        </li>
+        <div className="mb-3">
+          <small>Email</small>
+          <h6>{user.email}</h6>
+        </div>
 
-        <li className="nav-item">
-          <button className={`nav-link ${activeTab === "payslip" && "active"}`}
-            onClick={() => setActiveTab("payslip")}>
-            Payslip
-          </button>
-        </li>
-      </ul>
+        <div className="mb-4">
+          <small>Department</small>
+          <h6>{user.department}</h6>
+        </div>
 
-      {/* ================= ATTENDANCE ================= */}
-      {activeTab === "attendance" && (
-        <div>
+        <button
+          className="btn btn-light w-100"
+          onClick={() => {
+            localStorage.clear();
+            window.location.href = "/employee-login";
+          }}
+        >
+          Logout
+        </button>
+      </div>
 
-          {/* Check In / Out */}
-          <div className="card p-4 shadow text-center mb-4">
-            {!checkedIn ? (
+      {/* 🟢 Main Content */}
+      <div className="flex-grow-1 p-4">
+
+        <h2 className="mb-3">Dashboard</h2>
+        <p className="text-muted">Welcome back, <b>{user.name}</b> 👋</p>
+
+        {/* 🔹 Action Cards */}
+        <div className="row mt-4">
+
+          <div className="col-md-6 mb-3">
+            <div className="card shadow border-0 p-4 text-center">
+              <h5>Check-In</h5>
               <button
-                className="btn btn-success btn-lg"
-                onClick={() => setCheckedIn(true)}
+                className="btn btn-success mt-2"
+                onClick={handleCheckIn}
               >
                 Check In
               </button>
-            ) : (
+             {checkInTime && (
+              <div className="alert alert-success mt-3">
+               ✅ Checked In at: <b>{new Date(checkInTime).toLocaleTimeString()}</b>
+            </div>
+                  )}
+            </div>
+          </div>
+
+          <div className="col-md-6 mb-3">
+            <div className="card shadow border-0 p-4 text-center">
+              <h5>Check-Out</h5>
               <button
-                className="btn btn-danger btn-lg"
-                onClick={() => setCheckedIn(false)}
+                className="btn btn-danger mt-2"
+                onClick={handleCheckOut}
               >
                 Check Out
               </button>
-            )}
+              {checkOutTime && (
+                <div className="alert alert-danger mt-3">
+                  ❌ Checked Out at: <b>{new Date(checkOutTime).toLocaleTimeString()}</b>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Attendance Table */}
-          <div className="card shadow p-3">
-            <h5>Monthly Attendance</h5>
+        </div>
 
-            <table className="table table-bordered mt-3">
-              <thead className="table-dark">
-                <tr>
-                  <th>Date</th>
-                  <th>Login</th>
-                  <th>Logout</th>
-                  <th>Hours</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attendanceData.map((a, i) => (
-                  <tr key={i}>
-                    <td>{a.date}</td>
-                    <td>{a.login}</td>
-                    <td>{a.logout}</td>
-                    <td>{a.hours}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* 🔹 Working Hours */}
+        {hours && (
+          <div className="card shadow border-0 p-4 mt-3 text-center">
+            <h5>Total Working Hours</h5>
+            <h2 className="text-primary">{hours} hrs</h2>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ================= SALARY ================= */}
-      {activeTab === "salary" && (
-        <div className="card shadow p-4">
-          <h5>Salary Details</h5>
-
-          <p>Present Days: {salary.presentDays}</p>
-          <p>LOP Days: {salary.lopDays}</p>
-          <p>Overtime: {salary.overtime} hrs</p>
-
-          <h4 className="text-success">Net Salary: ₹{salary.net}</h4>
-        </div>
-      )}
-
-      {/* ================= PAYSLIP ================= */}
-      {activeTab === "payslip" && (
-        <div className="card shadow p-4">
-          <h3 className="text-center">Payslip</h3>
-          <hr />
-
-          <p><strong>Name:</strong> Employee</p>
-          <p><strong>Month:</strong> April</p>
-
-          <table className="table">
-            <tbody>
-              <tr>
-                <td>Basic Salary</td>
-                <td>₹20000</td>
-              </tr>
-              <tr>
-                <td>LOP Deduction</td>
-                <td>-₹2000</td>
-              </tr>
-              <tr>
-                <td>Overtime</td>
-                <td>₹3000</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <h4 className="text-end text-primary">Net: ₹21000</h4>
-
-          <button className="btn btn-outline-primary w-100 mt-3">
-            Download Payslip
-          </button>
-        </div>
-      )}
-
+      </div>
     </div>
   );
 }

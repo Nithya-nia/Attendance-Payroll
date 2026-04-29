@@ -35,9 +35,9 @@ function Landing() {
 
               <button 
                 className="btn btn-primary w-100"
-                onClick={() => navigate("/employee-signup")}
+                onClick={() => navigate("/employee-login")}
               >
-                Signup as Employee
+                Login as Employee
               </button>
             </div>
           </div>
