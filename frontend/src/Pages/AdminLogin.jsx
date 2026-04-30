@@ -1,94 +1,73 @@
 import { useState } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    setError("");
-
     if (!email || !password) {
-      return setError("Please enter email and password");
+      return alert("Enter email & password");
     }
 
     try {
-      // ✅ use common login API
       const res = await axios.post("http://localhost:5000/admin-login", {
         email,
         password
       });
 
-      const user = res.data.user;
+      console.log("LOGIN RESPONSE:", res.data);
 
-      if (!user) {
-        return setError("Invalid response from server");
-      }
+      if (res.data.user) {
+        // ✅ FIX: store user properly
+        localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      // ✅ store user
-      localStorage.setItem("user", JSON.stringify(user));
-
-      // ✅ role-based navigation
-      if (user.role === "admin") {
         navigate("/admin-page");
       } else {
-        navigate("/employee-page");
+        alert(res.data.message);
       }
 
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Login failed");
+      alert("Login failed");
     }
   };
 
   return (
-    <div className="container mt-5">
-      <div className="card col-md-5 mx-auto shadow p-4">
-
-        <h3 className="text-center mb-3">Login</h3>
-
-        {error && (
-          <div className="alert alert-danger">{error}</div>
-        )}
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h2>Admin Login</h2>
 
         <input
-          type="email"
-          className="form-control mb-3"
           placeholder="Email"
-          autoComplete="off"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          style={styles.input}
         />
 
         <input
           type="password"
-          className="form-control mb-3"
           placeholder="Password"
-          autoComplete="off"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          style={styles.input}
         />
 
-        <button
-          className="btn btn-success w-100"
-          onClick={handleLogin}
-        >
+        <button onClick={handleLogin} style={styles.btn}>
           Login
         </button>
-
-        <div className="mt-3 text-center">
-          <Link to="/admin-signup">
-            Don't have an account? Sign Up
-          </Link>
-        </div>
-
       </div>
     </div>
   );
 }
+
+const styles = {
+  container: { display: "flex", height: "100vh", justifyContent: "center", alignItems: "center" },
+  card: { padding: 30, background: "#fff", borderRadius: 10, boxShadow: "0 0 10px #ccc" },
+  input: { width: "100%", padding: 10, margin: "10px 0" },
+  btn: { width: "100%", padding: 10, background: "#1f3bb3", color: "white", border: "none" }
+};
 
 export default AdminLogin;

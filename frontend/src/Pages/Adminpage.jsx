@@ -1,163 +1,363 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 function AdminPage() {
+  const [admin, setAdmin] = useState(null);
   const [activeTab, setActiveTab] = useState("employees");
 
-  // Dummy data (replace with API later)
-  const [employees, setEmployees] = useState([
-    { name: "John", department: "IT", salary: 1000 },
-  ]);
+  const [employees, setEmployees] = useState([]);
+  const [todayAttendance, setTodayAttendance] = useState(null);
+  const [monthlyAttendance, setMonthlyAttendance] = useState(null);
 
-  const [attendance] = useState([
-    { name: "John", date: "01-Apr", status: "Present" },
-    { name: "John", date: "02-Apr", status: "Absent" },
-  ]);
+  const [payroll, setPayroll] = useState(null);
+  const [salaryStatus, setSalaryStatus] = useState("pending");
 
-  const [salaryApproved, setSalaryApproved] = useState(false);
+  useEffect(() => {
+    const data = localStorage.getItem("user");
 
-  // Add Employee
-  const addEmployee = () => {
-    setEmployees([
-      ...employees,
-      { name: "New Employee", department: "HR", salary: 800 },
-    ]);
+    if (data) {
+      const parsed = JSON.parse(data);
+      console.log("Admin Data:", parsed); // DEBUG
+      setAdmin(parsed);
+    }
+
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    const res = await axios.get("http://localhost:5000/employees");
+    setEmployees(res.data);
   };
 
+  const deleteEmployee = async (id) => {
+    await axios.delete(`http://localhost:5000/employee/${id}`);
+    fetchEmployees();
+  };
+
+  const updateEmployee = async (emp) => {
+    const name = prompt("Enter name", emp.name);
+    const dept = prompt("Enter department", emp.department);
+
+    await axios.put(`http://localhost:5000/employee/${emp._id}`, {
+      name,
+      department: dept
+    });
+
+    fetchEmployees();
+  };
+
+  const viewAttendance = async (id) => {
+    setActiveTab("attendance");
+
+    const today = await axios.get(`http://localhost:5000/attendance/today/${id}`);
+    const month = await axios.get(`http://localhost:5000/attendance/monthly/${id}`);
+
+    setTodayAttendance(today.data);
+    setMonthlyAttendance(month.data);
+  };
+
+  const viewPayroll = async (id) => {
+    setActiveTab("payroll");
+
+    const month = new Date().getMonth() + 1;
+    const year = new Date().getFullYear();
+
+    await axios.post("http://localhost:5000/payroll/generate", {
+      userId: id,
+      month,
+      year
+    });
+
+    const res = await axios.get(
+      `http://localhost:5000/payroll/${id}?month=${month}&year=${year}`
+    );
+
+    setPayroll(res.data); 
+    setSalaryStatus("pending");
+  };
+const downloadPayslip = () => {
+  console.log("Download clicked");
+
+  const el = document.getElementById("payslip");
+
+  if (!el) {
+    alert("Payslip not found");
+    return;
+  }
+
+  const newWin = window.open("", "_blank");
+
+  newWin.document.write(`
+    <html>
+      <body>
+        ${el.innerHTML}
+      </body>
+    </html>
+  `);
+
+  newWin.document.close();
+  newWin.print();
+};
   return (
-    <div className="container mt-4">
+    <div style={styles.container}>
 
-      <h3 className="text-center mb-4">Admin Dashboard</h3>
+      {/* SIDEBAR */}
+      <div style={styles.sidebar}>
+        <div>
+          <h2 style={{ marginBottom: 20 }}>Admin Panel</h2>
 
-      {/* Tabs */}
-      <ul className="nav nav-tabs mb-3">
-        <li className="nav-item">
-          <button className={`nav-link ${activeTab==="employees" && "active"}`}
-            onClick={() => setActiveTab("employees")}>
-            Employees
-          </button>
-        </li>
+          {admin ? (
+            <div style={styles.profileCard}>
+              <div style={styles.avatar}>
+                {admin.name?.charAt(0)?.toUpperCase()}
+              </div>
 
-        <li className="nav-item">
-          <button className={`nav-link ${activeTab==="attendance" && "active"}`}
-            onClick={() => setActiveTab("attendance")}>
-            Attendance
-          </button>
-        </li>
+              <h4>{admin.name}</h4>
+              <p style={{ opacity: 0.8 }}>{admin.email}</p>
 
-        <li className="nav-item">
-          <button className={`nav-link ${activeTab==="payroll" && "active"}`}
-            onClick={() => setActiveTab("payroll")}>
-            Payroll
-          </button>
-        </li>
-      </ul>
-
-      {/* ================= EMPLOYEE ================= */}
-      {activeTab === "employees" && (
-        <div className="card p-4 shadow">
-
-          <div className="d-flex justify-content-between">
-            <h5>Employee List</h5>
-            <button className="btn btn-primary" onClick={addEmployee}>
-              Add Employee
-            </button>
-          </div>
-
-          <table className="table mt-3">
-            <thead className="table-dark">
-              <tr>
-                <th>Name</th>
-                <th>Department</th>
-                <th>Salary/Day</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((emp, i) => (
-                <tr key={i}>
-                  <td>{emp.name}</td>
-                  <td>{emp.department}</td>
-                  <td>₹{emp.salary}</td>
-                  <td>
-                    <button className="btn btn-warning btn-sm me-2">
-                      Update
-                    </button>
-                    <button className="btn btn-danger btn-sm">
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-        </div>
-      )}
-
-      {/* ================= ATTENDANCE ================= */}
-      {activeTab === "attendance" && (
-        <div className="card p-4 shadow">
-
-          <h5>Daily & Monthly Attendance</h5>
-
-          <table className="table mt-3">
-            <thead className="table-dark">
-              <tr>
-                <th>Name</th>
-                <th>Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendance.map((a, i) => (
-                <tr key={i}>
-                  <td>{a.name}</td>
-                  <td>{a.date}</td>
-                  <td>
-                    <span className={`badge ${a.status==="Present" ? "bg-success" : "bg-danger"}`}>
-                      {a.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-        </div>
-      )}
-
-      {/* ================= PAYROLL ================= */}
-      {activeTab === "payroll" && (
-        <div className="card p-4 shadow">
-
-          <h5>Payroll Calculation</h5>
-
-          <p>Present Days: 22</p>
-          <p>LOP Days: 3</p>
-          <p>Overtime: 10 hrs</p>
-
-          <h4 className="text-success">Net Salary: ₹25000</h4>
-
-          {/* Approve Button */}
-          <button
-            className={`btn mt-3 ${salaryApproved ? "btn-success" : "btn-primary"}`}
-            onClick={() => setSalaryApproved(true)}
-          >
-            {salaryApproved ? "Approved ✅" : "Approve Salary"}
-          </button>
-
-          {/* Download Payslip */}
-          {salaryApproved && (
-            <button className="btn btn-outline-dark mt-3 ms-2">
-              Download Payslip
-            </button>
+              <span style={styles.company}>
+                {admin.company || "No Company"}
+              </span>
+            </div>
+          ) : (
+            <p>Loading admin...</p>
           )}
 
+          <button
+            style={activeTab === "employees" ? styles.activeBtn : styles.btn}
+            onClick={() => setActiveTab("employees")}
+          >
+            Employees
+          </button>
         </div>
-      )}
 
+        <button
+          style={styles.logout}
+          onClick={() => {
+            localStorage.clear();
+            window.location.href = "/";
+          }}
+        >
+          Logout
+        </button>
+      </div>
+
+      {/* MAIN */}
+      <div style={styles.main}>
+        <h2>{activeTab.toUpperCase()}</h2>
+
+        {/* EMPLOYEES */}
+        {activeTab === "employees" && (
+          <div style={styles.card}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Dept</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {employees.length > 0 ? (
+                  employees.map(emp => (
+                    <tr key={emp._id}>
+                      <td>{emp.name}</td>
+                      <td>{emp.email}</td>
+                      <td>{emp.department}</td>
+
+                      <td>
+                        <button style={styles.actionBtn} onClick={() => updateEmployee(emp)}>✏️</button>
+                        <button style={styles.deleteBtn} onClick={() => deleteEmployee(emp._id)}>🗑</button>
+                        <button style={styles.actionBtn} onClick={() => viewAttendance(emp._id)}>📊</button>
+                        <button style={styles.actionBtn} onClick={() => viewPayroll(emp._id)}>💰</button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4">No employees found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ATTENDANCE */}
+        {activeTab === "attendance" && (
+          <div style={styles.card}>
+            <h4>Today</h4>
+            <p>Check In: {todayAttendance?.checkIn || "-"}</p>
+            <p>Check Out: {todayAttendance?.checkOut || "-"}</p>
+
+            <h4 style={{ marginTop: 20 }}>Monthly</h4>
+            <p>Present: {monthlyAttendance?.present || 0}</p>
+            <p>Absent: {monthlyAttendance?.absent || 0}</p>
+          </div>
+        )}
+
+        {/* PAYROLL */}
+        {activeTab === "payroll" && payroll && (
+          <div style={styles.card} id="payslip">
+            <h3>Payslip</h3>
+
+            <p>Basic: ₹{payroll.basicSalary}</p>
+            <p style={{ color: "red" }}>LOP: ₹{payroll.lop}</p>
+            <p style={{ color: "green" }}>OT: ₹{payroll.overtime}</p>
+
+            <h2>₹{payroll.netPay}</h2>
+
+            <p>Status: <b>{salaryStatus}</b></p>
+
+            <button style={styles.approve} onClick={() => setSalaryStatus("approved")}>
+              Approve
+            </button>
+
+            <button style={styles.hold} onClick={() => setSalaryStatus("hold")}>
+              Hold
+            </button>
+             <button style={styles.download} onClick={downloadPayslip}>
+                  Download Payslip
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+const styles = {
+  container: { display: "flex", fontFamily: "Segoe UI" },
+
+  sidebar: {
+    width: "260px",
+    background: "linear-gradient(180deg,#4e73df,#1f3bb3)",
+    color: "white",
+    padding: "20px",
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between"
+  },
+
+  profileCard: {
+    textAlign: "center",
+    marginBottom: "20px"
+  },
+
+  avatar: {
+    width: "70px",
+    height: "70px",
+    borderRadius: "50%",
+    background: "white",
+    color: "#1f3bb3",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "26px",
+    margin: "auto",
+    marginBottom: "10px",
+    fontWeight: "bold"
+  },
+
+  company: {
+    background: "#ffffff30",
+    padding: "5px 10px",
+    borderRadius: "10px",
+    fontSize: "12px"
+  },
+
+  btn: {
+    width: "100%",
+    padding: "10px",
+    background: "transparent",
+    color: "white",
+    border: "none",
+    cursor: "pointer"
+  },
+
+  activeBtn: {
+    width: "100%",
+    padding: "10px",
+    background: "#ffffff30",
+    color: "white",
+    border: "none"
+  },
+
+  logout: {
+    background: "white",
+    color: "#1f3bb3",
+    padding: "10px",
+    borderRadius: "8px",
+    border: "none",
+    cursor: "pointer"
+  },
+
+  main: {
+    flex: 1,
+    padding: "30px",
+    background: "#f4f6fb"
+  },
+
+  table: {
+    width: "100%",
+    borderCollapse: "collapse"
+  },
+
+  card: {
+    background: "white",
+    padding: "20px",
+    borderRadius: "12px",
+    marginTop: "20px",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.08)"
+  },
+
+  actionBtn: {
+    margin: "3px",
+    padding: "6px 10px",
+    borderRadius: "6px",
+    border: "none",
+    background: "#4e73df",
+    color: "white",
+    cursor: "pointer"
+  },
+
+  deleteBtn: {
+    margin: "3px",
+    padding: "6px 10px",
+    borderRadius: "6px",
+    border: "none",
+    background: "#e74a3b",
+    color: "white",
+    cursor: "pointer"
+  },
+
+  approve: {
+    background: "green",
+    color: "white",
+    padding: "8px",
+    marginRight: "10px",
+    border: "none",
+    borderRadius: "6px"
+  },
+
+  hold: {
+    background: "orange",
+    color: "white",
+    padding: "8px",
+    border: "none",
+    borderRadius: "6px"
+  },
+    download: {
+    background: "blue",
+    color: "white",
+    padding: "6px",
+    marginLeft: "10px",
+    border: "none",
+    borderRadius: "6px"
+  }
+};
 
 export default AdminPage;
