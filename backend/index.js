@@ -376,6 +376,28 @@ app.post("/admin-login", async (req, res) => {
   }
 });
 
+app.get("/employees", async (req, res) => {
+  const data = await userdb.collection("users")
+    .find({ role: "employee" })
+    .toArray();
+  res.json(data);
+});
+
+app.delete("/employee/:id", async (req, res) => {
+  await userdb.collection("users")
+    .deleteOne({ _id: new ObjectId(req.params.id) });
+
+  res.json({ message: "Deleted" });
+});
+
+app.put("/employee/:id", async (req, res) => {
+  await userdb.collection("users").updateOne(
+    { _id: new ObjectId(req.params.id) },
+    { $set: req.body }
+  );
+  res.json({ message: "Updated" });
+});
+
 app.listen(port, () => {
   console.log("Server is running on " ,port);
 });
