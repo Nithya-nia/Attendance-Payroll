@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 
 
@@ -22,6 +23,8 @@ const client = new MongoClient(uri, {
  
 let userdb;
 let Attendancedb;
+let payrolldb;
+const payrollCollection = client.db("PayrollDB").collection("Payroll");
 
 async function run() {
   try {
@@ -29,6 +32,7 @@ async function run() {
     await client.connect();
     userdb = client.db("UserDB");
     Attendancedb = client.db("AttendanceDB");
+    payrolldb = client.db("PayrollDB");
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     
@@ -63,7 +67,7 @@ app.post("/employee-signup",async(req,res)=>{
   }
 });
 
-app.post("/login", async (req, res) => {
+app.post("/employee-login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -168,6 +172,207 @@ app.post("/check-out", async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/attendance/today/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const today = new Date().toDateString();
+
+    const record = await Attendancedb.collection("Attendance").findOne({
+      userId,
+      date: today
+    });
+
+    res.json(record || null);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/attendance/monthly/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const records = await Attendancedb.collection("Attendance")
+      .find({ userId })
+      .toArray();
+
+    let present = 0;
+    let halfDay = 0;
+    let absent = 0;
+
+    records.forEach(r => {
+      if (!r.totalHours) return;
+
+      if (r.totalHours >= 8) present++;
+      else if (r.totalHours >= 4) halfDay++;
+      else absent++;
+    });
+
+    res.json({
+      present,
+      halfDay,
+      absent,
+      totalDays: records.length
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+// ================== GENERATE PAYROLL ==================
+app.post("/payroll/generate", async (req, res) => {
+  try {
+    let { userId, month, year } = req.body;
+
+    // ✅ FIX: force types
+    userId = String(userId);
+    month = Number(month);
+    year = Number(year);
+
+    // ✅ prevent duplicate
+    const existing = await payrollCollection.findOne({ userId, month, year });
+    if (existing) {
+      return res.json(existing);
+    }
+
+    const basicSalary = 30000;
+
+    // ✅ get attendance
+    const attendance = await Attendancedb.collection("Attendance")
+      .find({ userId })
+      .toArray();
+
+    const totalDays = new Date(year, month, 0).getDate(); // dynamic days
+    const presentDays = attendance.length;
+
+    const perDay = basicSalary / totalDays;
+    const lop = (totalDays - presentDays) * perDay;
+
+    const overtime = 1000;
+    const netPay = basicSalary - lop + overtime;
+
+    const payroll = {
+      userId,
+      month,
+      year,
+      basicSalary,
+      totalDays,
+      presentDays,
+      lop: Math.round(lop),
+      overtime,
+      netPay: Math.round(netPay),
+      createdAt: new Date()
+    };
+
+    await payrollCollection.insertOne(payroll);
+
+    console.log("Generated Payroll:", payroll);
+
+    res.json(payroll);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================== GET PAYROLL ==================
+app.get("/payroll/:userId", async (req, res) => {
+  try {
+    let { userId } = req.params;
+    let { month, year } = req.query;
+
+    // ✅ FIX: force types
+    userId = String(userId);
+    month = Number(month);
+    year = Number(year);
+
+    console.log("Searching:", { userId, month, year });
+
+    const data = await payrollCollection.findOne({
+      userId,
+      month,
+      year
+    });
+
+    console.log("Found:", data);
+
+    res.json(data || { message: "Payroll not generated yet" });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+app.post("/admin-signup", async (req, res) => {
+  try {
+    const { name, email, password, company } = req.body;
+
+    const existing = await userdb.collection("users").findOne({ email });
+
+    if (existing) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await userdb.collection("users").insertOne({
+      name,
+      email,
+      password: hashedPassword,
+      role: "admin",   // ✅ IMPORTANT
+      company,
+      createdAt: new Date()
+    });
+
+    res.status(201).json({ message: "Admin created successfully" });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+app.post("/admin-login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await userdb.collection("users").findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid password" });
+    }
+
+    res.json({
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        company: user.company
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
