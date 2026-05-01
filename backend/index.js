@@ -104,7 +104,7 @@ app.post("/check-in", async (req, res) => {
   try {
     const { userId, name } = req.body;
 
-    // prevent multiple check-ins
+    
     const existing = await Attendancedb.collection("Attendance").findOne({
       userId,
       checkOut: null
@@ -150,7 +150,7 @@ app.post("/check-out", async (req, res) => {
 
     const checkOutTime = new Date();
 
-    // ⏱️ calculate working hours
+   
     const diff = checkOutTime - new Date(record.checkIn);
     const totalHours = (diff / (1000 * 60 * 60)).toFixed(2);
 
@@ -227,17 +227,17 @@ app.get("/attendance/monthly/:userId", async (req, res) => {
 
 
 
-// ================== GENERATE PAYROLL ==================
+
 app.post("/payroll/generate", async (req, res) => {
   try {
     let { userId, month, year } = req.body;
 
-    // ✅ FIX: force types
+  
     userId = String(userId);
     month = Number(month);
     year = Number(year);
 
-    // ✅ prevent duplicate
+  
     const existing = await payrollCollection.findOne({ userId, month, year });
     if (existing) {
       return res.json(existing);
@@ -245,7 +245,7 @@ app.post("/payroll/generate", async (req, res) => {
 
     const basicSalary = 30000;
 
-    // ✅ get attendance
+   
     const attendance = await Attendancedb.collection("Attendance")
       .find({ userId })
       .toArray();
@@ -274,7 +274,7 @@ app.post("/payroll/generate", async (req, res) => {
 
     await payrollCollection.insertOne(payroll);
 
-    console.log("Generated Payroll:", payroll);
+    // console.log("Generated Payroll:", payroll);
 
     res.json(payroll);
 
@@ -283,18 +283,18 @@ app.post("/payroll/generate", async (req, res) => {
   }
 });
 
-// ================== GET PAYROLL ==================
+
 app.get("/payroll/:userId", async (req, res) => {
   try {
     let { userId } = req.params;
     let { month, year } = req.query;
 
-    // ✅ FIX: force types
+    
     userId = String(userId);
     month = Number(month);
     year = Number(year);
 
-    console.log("Searching:", { userId, month, year });
+    // console.log("Searching:", { userId, month, year });
 
     const data = await payrollCollection.findOne({
       userId,
@@ -302,7 +302,7 @@ app.get("/payroll/:userId", async (req, res) => {
       year
     });
 
-    console.log("Found:", data);
+    // console.log("Found:", data);
 
     res.json(data || { message: "Payroll not generated yet" });
 
