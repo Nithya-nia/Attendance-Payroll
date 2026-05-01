@@ -14,12 +14,12 @@ function AdminSignup() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  // handle input
+  
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // submit
+ 
   const handleSubmit = async () => {
     setError("");
     setMessage("");
@@ -33,7 +33,7 @@ function AdminSignup() {
 
       setMessage("Admin created successfully - you can now login!");
 
-      // reset form
+    
       setForm({
         name: "",
         email: "",

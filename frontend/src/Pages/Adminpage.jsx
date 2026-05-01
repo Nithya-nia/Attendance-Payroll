@@ -17,7 +17,7 @@ function AdminPage() {
 
     if (data) {
       const parsed = JSON.parse(data);
-      console.log("Admin Data:", parsed); // DEBUG
+      console.log("Admin Data:", parsed); 
       setAdmin(parsed);
     }
 
@@ -168,10 +168,10 @@ const downloadPayslip = () => {
                       <td>{emp.department}</td>
 
                       <td>
-                        <button style={styles.actionBtn} onClick={() => updateEmployee(emp)}>✏️</button>
-                        <button style={styles.deleteBtn} onClick={() => deleteEmployee(emp._id)}>🗑</button>
-                        <button style={styles.actionBtn} onClick={() => viewAttendance(emp._id)}>📊</button>
-                        <button style={styles.actionBtn} onClick={() => viewPayroll(emp._id)}>💰</button>
+                        <button style={styles.actionBtn} onClick={() => updateEmployee(emp)}>EDIT</button>
+                        <button style={styles.deleteBtn} onClick={() => deleteEmployee(emp._id)}>DELETE</button>
+                        <button style={styles.actionBtn} onClick={() => viewAttendance(emp._id)}>SALARY</button>
+                        <button style={styles.actionBtn} onClick={() => viewPayroll(emp._id)}>PAYROLL</button>
                       </td>
                     </tr>
                   ))
@@ -185,7 +185,7 @@ const downloadPayslip = () => {
           </div>
         )}
 
-        {/* ATTENDANCE */}
+      
         {activeTab === "attendance" && (
           <div style={styles.card}>
             <h4>Today</h4>
@@ -198,7 +198,7 @@ const downloadPayslip = () => {
           </div>
         )}
 
-        {/* PAYROLL */}
+      
         {activeTab === "payroll" && payroll && (
           <div style={styles.card} id="payslip">
             <h3>Payslip</h3>

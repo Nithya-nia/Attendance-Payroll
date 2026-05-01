@@ -97,22 +97,21 @@ function EmployeePage() {
         </button>
       </div>
 
-      {/* MAIN */}
       <div style={styles.main}>
-        <h2>Welcome, {user.name} 👋</h2>
+        <h2>Welcome, {user.name} !!</h2>
 
         {error && <p style={styles.error}>{error}</p>}
 
-        {/* ACTIONS */}
+       
         <div style={styles.actions}>
           <button style={styles.checkIn} onClick={checkIn}>✔ Check In</button>
           <button style={styles.checkOut} onClick={checkOut}>✖ Check Out</button>
         </div>
 
-        {/* CARDS */}
+      
         <div style={styles.grid}>
 
-          {/* TODAY */}
+         
           <div style={styles.card}>
             <h4>📅 Today</h4>
             <p><b>In:</b> {todayAttendance?.checkIn ? new Date(todayAttendance.checkIn).toLocaleTimeString() : "-"}</p>
@@ -120,7 +119,7 @@ function EmployeePage() {
             <p><b>Hours:</b> {todayAttendance?.totalHours || 0}</p>
           </div>
 
-          {/* MONTHLY */}
+         
           <div style={styles.card}>
             <h4>📊 Monthly</h4>
             <p>Present: {monthly?.present || 0}</p>
@@ -128,7 +127,7 @@ function EmployeePage() {
             <p>Absent: {monthly?.absent || 0}</p>
           </div>
 
-          {/* PAYROLL */}
+         
           <div style={styles.payrollCard}>
             <h4>💰 Payroll</h4>
 
@@ -155,7 +154,7 @@ function EmployeePage() {
                   ₹{payroll.netPay}
                 </div>
 
-                {/* VIEW PAYSLIP BUTTON */}
+               
                 <button
                   style={styles.payslipBtn}
                   onClick={() => setShowPayslip(!showPayslip)}
@@ -163,7 +162,7 @@ function EmployeePage() {
                   {showPayslip ? "Hide Payslip" : "View Payslip"}
                 </button>
 
-                {/* INLINE PAYSLIP */}
+               
                 {showPayslip && (
                   <div style={styles.payslipBox}>
                     <h3 style={{ textAlign: "center" }}>Salary Slip</h3>
